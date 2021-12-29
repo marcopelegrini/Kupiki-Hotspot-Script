@@ -8,19 +8,19 @@ LOGNAME="kupiki_hotspot.log"
 # be sure to add a / at the end of the path
 LOGPATH="/var/log/"
 # Password for user root (MySql/MariaDB not system)
-MYSQL_PASSWORD="pihotspot"
+MYSQL_PASSWORD="glaumshire9"
 # Name of the hotspot that will be visible for users/customers
-HOTSPOT_NAME="kupikihotspot"
+HOTSPOT_NAME="Glaum-Matrix"
 # IP of the hotspot
-HOTSPOT_IP="192.168.10.1"
+HOTSPOT_IP="10.1.1.1"
 # Wi-fi code country. Use above link to find yours
 # https://www.cisco.com/c/en/us/td/docs/wireless/wcs/3-2/configuration/guide/wcscfg32/wcscod.html
-WIFI_COUNTRY_CODE="FR"
+WIFI_COUNTRY_CODE="CA"
 # Use HTTPS to connect to web portal
 # Set value to Y or N
 HOTSPOT_HTTPS="N"
 # Network where the hotspot is located
-HOTSPOT_NETWORK="192.168.10.0"
+HOTSPOT_NETWORK="10.1.1.0"
 # Secret word for FreeRadius
 FREERADIUS_SECRETKEY=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 # WAN interface (the one with Internet - default 'eth0' or long name for Debian 9+)
@@ -31,11 +31,11 @@ LAN_INTERFACE="wlan0"
 LAN_WIFI_DRIVER="nl80211"
 # Install Haserl (required if you want to use the default Coova Portal)
 # Set value to Y or N
-HASERL_INSTALL="N"
+HASERL_INSTALL="Y"
 # Password used for the generation of the certificate
-CERT_PASSWORD="pihotspot"
+CERT_PASSWORD="glaumshire9"
 # Number of days to certify the certificate for (default 2 years)
-CERT_DAYS="730"
+CERT_DAYS="1730"
 # Make Avahi optional
 # Set value to Y or N
 AVAHI_INSTALL="Y"
@@ -64,10 +64,10 @@ MAC_AUTHENTICATION_ENABLED="N"
 MAC_AUTHENTICATION_PASSWORD="123456"
 # Install web frontend of Kupiki Hotspot
 # Set value to Y or N
-INSTALL_KUPIKI_ADMIN=N
+INSTALL_KUPIKI_ADMIN=Y
 # Install Cron job for the hotspot updater. Will be executed every sunday at 8am (system time)
 # Set value to Y or N
-ADD_CRON_UPDATER=Y
+ADD_CRON_UPDATER=N
 # Install additional counters
 # Set value to Y or N
 KUPIKI_SQL_COUNTERS=Y
@@ -97,7 +97,7 @@ fi
 # Minimal version for Debian
 DEBIAN_MINIMAL_VERSION=9.0
 # Default version of MariaDB
-MARIADB_VERSION='10.1'
+MARIADB_VERSION='10.5'
 # CoovaChilli GIT URL
 COOVACHILLI_ARCHIVE="https://github.com/coova/coova-chilli.git"
 # Kupiki SQL counters
@@ -352,24 +352,26 @@ package_check_install() {
     dpkg-query -W -f='${Status}' "${1}" 2>/dev/null | grep -c "ok installed" || ${PKG_INSTALL} "${1}"
 }
 
-PIHOTSPOT_DEPS_START=( apt-transport-https localepurge git wget )
-PIHOTSPOT_DEPS_WIFI=( apt-utils firmware-brcm80211 firmware-ralink firmware-realtek )
-PIHOTSPOT_DEPS=( build-essential grep whiptail debconf-utils nfdump figlet git fail2ban hostapd php-mysql php-pear php-gd php-db php-fpm libgd-dev libpcrecpp0v5 libxpm4 nginx debhelper libssl-dev libcurl4-gnutls-dev mariadb-server freeradius freeradius-mysql gcc make pkg-config iptables haserl libjson-c-dev gengetopt devscripts libtool bash-completion autoconf automake libffi-dev python python-pip jq python-backports.ssl-match-hostname docker docker-compose)
+PIHOTSPOT_DEPS_START="apt-transport-https localepurge git wget collectd"
+PIHOTSPOT_DEPS_WIFI="apt-utils firmware-brcm80211 firmware-ralink firmware-realtek"
+PIHOTSPOT_DEPS="build-essential grep whiptail debconf-utils nfdump figlet git fail2ban hostapd php-mysql php-pear php-gd php-db php-fpm libgd-dev libpcrecpp0v5 libxpm4 nginx debhelper libssl-dev libcurl4-gnutls-dev mariadb-server freeradius freeradius-mysql gcc make pkg-config iptables haserl libjson-c-dev gengetopt devscripts libtool bash-completion autoconf automake libffi-dev python3 python3-pip jq docker docker-compose"
 
 install_dependent_packages() {
 
-  declare -a argArray1=("${!1}")
+#   declare -a argArray1=("${!1}")
 
-  if command -v debconf-apt-progress &> /dev/null; then
-    $SUDO debconf-apt-progress -- ${PKG_INSTALL} "${argArray1[@]}"
-  else
-    for i in "${argArray1[@]}"; do
-      echo -n ":::    Checking for $i..."
-      $SUDO package_check_install "${i}" &> /dev/null
-			check_returned_code $?
-      echo " installed!"
-    done
-  fi
+#   if command -v debconf-apt-progress &> /dev/null; then
+#     $SUDO debconf-apt-progress -- ${PKG_INSTALL} "${argArray1[@]}"
+#   else
+    # for i in "${argArray1[@]}"; do
+    #   echo -n ":::    Checking for $i..."
+    #   $SUDO package_check_install "${i}" &> /dev/null
+        # $SUDO apt-get install ${i}
+        $SUDO apt-get install -y $@
+        check_returned_code $?
+        echo " installed!"
+    # done
+#   fi
 }
 
 valid_ip_address() {
@@ -483,11 +485,12 @@ secure_system
 
 prepare_install
 
-update_package_cache
+#update_package_cache
 
 notify_package_updates_available
 
-install_dependent_packages PIHOTSPOT_DEPS_START[@]
+install_dependent_packages $PIHOTSPOT_DEPS_START
+
 
 if [[ "$BLUETOOTH_ENABLED" = "N" ]]; then
 	display_message "Disable integrated Bluetooth support (After next reboot)"
@@ -523,7 +526,7 @@ if [[ $COMMAND_RESULT -ne 0 ]]; then
 
     execute_command "apt dist-upgrade -y --allow-remove-essential --allow-change-held-packages" true "Upgrading the distro. Be patient"
 
-    install_dependent_packages PIHOTSPOT_DEPS_WIFI[@]
+    install_dependent_packages $PIHOTSPOT_DEPS_WIFI
 
     display_message "Please reboot and run the script again"
     exit 1
@@ -541,7 +544,8 @@ check_returned_code $?
 
 if [[ "$AVAHI_INSTALL" = "Y" ]]; then
     display_message "Adding Avahi dependencies"
-    PIHOTSPOT_DEPS+=( avahi-daemon libavahi-client-dev )
+    #PIHOTSPOT_DEPS+=( avahi-daemon libavahi-client-dev )
+    install_dependent_packages avahi-daemon libavahi-client-dev
 
     execute_command "grep $HOTSPOT_NAME /etc/hosts" false "Updating /etc/hosts"
     if [[ $COMMAND_RESULT -ne 0 ]]; then
@@ -550,7 +554,7 @@ if [[ "$AVAHI_INSTALL" = "Y" ]]; then
     fi
 fi
 
-install_dependent_packages PIHOTSPOT_DEPS[@]
+install_dependent_packages $PIHOTSPOT_DEPS
 
 display_message "Correct configuration for Collectd daemon"
 sed -i "s/^FQDNLookup true$/FQDNLookup false/g" /etc/collectd/collectd.conf
@@ -586,6 +590,7 @@ fi
 
 display_message "Install pika module"
 pip install pika
+pip install backports.ssl_match_hostname
 check_returned_code $?
 
 # type docker-compose 2> /dev/null
@@ -897,6 +902,7 @@ check_returned_code $?
 if [[ "$DALORADIUS_INSTALL" = "Y" ]]; then
 
     execute_command "cp -Rf /usr/src/daloradius /usr/share/nginx/html/" true "Installing Daloradius in Nginx folder"
+    execute_command "cp /usr/share/nginx/html/daloradius/library/daloradius.conf.php.sample /usr/share/nginx/html/daloradius/library/daloradius.conf.php"
 
     display_message "Loading daloradius configuration into MySql"
     mariadb -u root -p$MYSQL_PASSWORD radius < /usr/share/nginx/html/daloradius/contrib/db/fr2-mysql-daloradius-and-freeradius.sql
@@ -1108,33 +1114,33 @@ display_message "Activating Freeradius service"
 /bin/systemctl enable freeradius.service
 check_returned_code $?
 
-display_message "Creating fail2ban local configuration"
-cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
-check_returned_code $?
+if [[ "$FAIL2BAN_ENABLED" = "Y" ]]; then
+    display_message "Creating fail2ban local configuration"
+    cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
+    check_returned_code $?
 
-display_message "Configuring fail2ban jail rules"
-cat > /etc/fail2ban/jail.local << EOT
-[DEFAULT]
-ignoreip = 127.0.0.1
-bantime  = 600
-findtime  = 600
-maxretry = 3
-backend = auto
+    display_message "Configuring fail2ban jail rules"
+    cat > /etc/fail2ban/jail.local << EOT
+    [DEFAULT]
+    ignoreip = 127.0.0.1
+    bantime  = 600
+    findtime  = 600
+    maxretry = 3
+    backend = auto
 
-[sshd]
-enabled  = true
-filter   = sshd
-action   = iptables[name=SSH, port=ssh, protocol=tcp]
-logpath  = /var/log/auth.log
-maxretry = 3
-
+    [sshd]
+    enabled  = true
+    filter   = sshd
+    action   = iptables[name=SSH, port=ssh, protocol=tcp]
+    logpath  = /var/log/auth.log
+    maxretry = 3
 EOT
 
-display_message "Reloading fail2ban local configuration"
-/usr/bin/fail2ban-client reload
-check_returned_code $?
+    display_message "Reloading fail2ban local configuration"
+    /usr/bin/fail2ban-client reload
+    check_returned_code $?
 
-if [[ "$FAIL2BAN_ENABLED" = "N" ]]; then
+else
     display_message "Disable fail2ban service"
     /bin/systemctl disable fail2ban.service
     check_returned_code $?
@@ -1179,13 +1185,12 @@ display_message "Changing rights of the folder"
 chmod 777 /var/local/kupiki
 check_returned_code $?
 
-display_message "Updating authentication plugin"
-mariadb -u root -p$MYSQL_PASSWORD << EOT
-use mysql;
-update user set authentication_string=password('$MYSQL_PASSWORD'), plugin='mysql_native_password' where user='root';
-flush privileges;
-EOT
-check_returned_code $?
+# display_message "Updating authentication plugin"
+# mariadb -u root -p$MYSQL_PASSWORD << EOT
+# SET PASSWORD FOR 'root'@localhost = PASSWORD('$MYSQL_PASSWORD');
+# flush privileges;
+# EOT
+# check_returned_code $?
 
 display_message "Creating backend script folder"
 mkdir -p /etc/kupiki && chmod 700 /etc/kupiki
